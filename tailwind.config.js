@@ -24,9 +24,10 @@ module.exports = {
         background: 'hsl(0 0% 100%)',
         foreground: 'hsl(222.2 84% 4.9%)',
         primary: {
-          DEFAULT: 'hsl(217.2 91.2% 59.8%)',
-          foreground: 'hsl(222.2 47.4% 11.2%)',
+          DEFAULT: 'hsl(330, 100, 64)',   // was: hsl(217.2 91.2% 59.8%)
+          foreground: 'hsl(0, 0, 100)',
         },
+
         secondary: {
           DEFAULT: 'hsl(210 40% 96%)',
           foreground: 'hsl(222.2 84% 4.9%)',
