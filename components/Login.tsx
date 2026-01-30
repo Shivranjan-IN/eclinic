@@ -1,214 +1,322 @@
-import { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Card } from "./ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Heart, ArrowLeft, User, Stethoscope, Building2 } from "lucide-react";
-import type { User as UserType } from "../App";
+import { useState } from 'react';
+import { User, UserRole } from '../App';
+import { Building2, Lock, Mail, Smartphone, KeyRound } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { authService } from '../services/authService';
+import { Toaster, toast } from 'sonner';
 
-interface LoginProps {
-  onLogin: (user: UserType) => void;
+interface LoginPageProps {
+  onLogin: (user: User) => void;
   onBack: () => void;
+  onRegister: (role: 'patient' | 'doctor' | 'clinic') => void;
 }
 
-export function Login({ onLogin, onBack }: LoginProps) {
-  const [isSignup, setIsSignup] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"patient" | "doctor" | "clinic">("patient");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+const demoUsers = [
+  { id: '1', name: 'Dr. Sarah Johnson', email: 'admin@clinic.com', role: 'admin' as UserRole, password: 'admin', mobile: '+91 98765 43210' },
+  { id: '2', name: 'Dr. Michael Chen', email: 'doctor@clinic.com', role: 'doctor' as UserRole, password: 'doctor', mobile: '+91 98765 43211' },
+  { id: '3', name: 'Emma Wilson', email: 'reception@clinic.com', role: 'receptionist' as UserRole, password: 'reception', mobile: '+91 98765 43212' },
+  { id: '4', name: 'John Doe', email: 'nurse@clinic.com', role: 'nurse' as UserRole, password: 'nurse', mobile: '+91 98765 43213' },
+  { id: '5', name: 'Lisa Martinez', email: 'lab@clinic.com', role: 'lab_technician' as UserRole, password: 'lab', mobile: '+91 98765 43214' },
+  { id: '6', name: 'Robert Brown', email: 'pharmacy@clinic.com', role: 'pharmacist' as UserRole, password: 'pharmacy', mobile: '+91 98765 43215' },
+  { id: '7', name: 'Rahul Sharma', email: 'patient@clinic.com', role: 'patient' as UserRole, password: 'patient', mobile: '+91 98765 43216' },
+];
 
-  const handleSubmit = (e: React.FormEvent) => {
+export function LoginPage({ onLogin, onBack, onRegister }: LoginPageProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Mock login - in real app this would authenticate with backend
-    const mockUser: UserType = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: isSignup ? name : "Demo User",
-      email: email,
-      role: selectedRole,
-      avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
-    };
-    
-    onLogin(mockUser);
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const user = await authService.signInWithEmail(email, password);
+      onLogin(user);
+      toast.success('Welcome back!');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Invalid credentials');
+      toast.error('Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const roles = [
-    {
-      value: "patient" as const,
-      label: "Patient",
-      icon: User,
-      description: "Access consultations and health records"
-    },
-    {
-      value: "doctor" as const,
-      label: "Doctor",
-      icon: Stethoscope,
-      description: "Manage patients and appointments"
-    },
-    {
-      value: "clinic" as const,
-      label: "Clinic / Admin",
-      icon: Building2,
-      description: "Oversee operations and staff"
+  const handleGoogleLogin = async () => {
+    try {
+      setError('');
+      await authService.signInWithGoogle();
+      // Supabase will redirect to the callback URL
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Google login failed');
+      toast.error('Google login failed');
     }
-  ];
+  };
+
+  const handleSendOTP = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = demoUsers.find(u => u.mobile === mobile);
+
+    if (user) {
+      setOtpSent(true);
+      setError('');
+      toast.info('OTP Sent (Demo: 123456)');
+    } else {
+      setError('Mobile number not registered');
+    }
+  };
+
+  const handleOTPLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp === '123456') {
+      const user = demoUsers.find(u => u.mobile === mobile);
+      if (user) {
+        const { password: _, ...userWithoutPassword } = user;
+        onLogin(userWithoutPassword);
+      }
+    } else {
+      setError('Invalid OTP');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 flex items-center justify-center p-4">
+      <Toaster />
       <div className="w-full max-w-md">
-        <Button 
-          variant="ghost" 
-          onClick={onBack}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
-        </Button>
-        
-        <Card className="p-8">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <Heart className="w-7 h-7 text-white" />
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <Building2 className="w-6 h-6 text-pink-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Elinic Healthcare</h1>
+              <p className="text-sm text-gray-600">Clinic Management Platform</p>
             </div>
           </div>
-          
-          <h2 className="text-center mb-2">Welcome to E-Clinic</h2>
-          <p className="text-center text-muted-foreground mb-6">
-            {isSignup ? "Create your account" : "Sign in to your account"}
-          </p>
 
-          <Tabs value={isSignup ? "signup" : "login"} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" onClick={() => setIsSignup(false)}>
-                Login
+          <Tabs defaultValue="email" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="email">
+                <Mail className="size-4 mr-2" />
+                Email
               </TabsTrigger>
-              <TabsTrigger value="signup" onClick={() => setIsSignup(true)}>
-                Sign Up
+              <TabsTrigger value="mobile">
+                <Smartphone className="size-4 mr-2" />
+                Mobile/OTP
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="email">
+              <form onSubmit={handleEmailLogin} className="space-y-6">
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative mt-2">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                      className="pl-10"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative mt-2">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                      className="pl-10"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
+                >
+                  {isLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-200"></span>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  variant="outline"
+                  className="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  Sign In With Google
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="mobile">
+              {!otpSent ? (
+                <form onSubmit={handleSendOTP} className="space-y-6">
+                  <div>
+                    <Label htmlFor="mobile">Mobile Number</Label>
+                    <div className="relative mt-2">
+                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                      <Input
+                        id="mobile"
+                        type="tel"
+                        value={mobile}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMobile(e.target.value)}
+                        className="pl-10"
+                        placeholder="+91 98765 43210"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
+                  >
+                    Send OTP
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleOTPLogin} className="space-y-6">
+                  <div>
+                    <Label htmlFor="otp">Enter OTP</Label>
+                    <div className="relative mt-2">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                      <Input
+                        id="otp"
+                        type="text"
+                        value={otp}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtp(e.target.value)}
+                        className="pl-10 tracking-widest text-center"
+                        placeholder="123456"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      OTP sent to {mobile}
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtp('');
+                        setError('');
+                      }}
+                      className="flex-1"
+                    >
+                      Change
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
+                    >
+                      Verify
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  💡 Demo OTP: <strong>123456</strong>
+                </p>
+              </div>
+            </TabsContent>
           </Tabs>
 
-          {/* Role Selection */}
-          <div className="mb-6">
-            <Label className="mb-3 block">Select Your Role</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {roles.map((role) => (
-                <button
-                  key={role.value}
-                  type="button"
-                  onClick={() => setSelectedRole(role.value)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    selectedRole === role.value
-                      ? "border-primary bg-pink-50"
-                      : "border-border hover:border-pink-300"
-                  }`}
-                >
-                  <role.icon className={`w-6 h-6 mx-auto mb-1 ${
-                    selectedRole === role.value ? "text-primary" : "text-muted-foreground"
-                  }`} />
-                  <p className="text-xs text-center">{role.label}</p>
-                </button>
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600 font-medium mb-2">Demo Accounts:</p>
+            <div className="space-y-1 text-xs text-gray-500">
+              {demoUsers.map(user => (
+                <div key={user.id} className="flex justify-between">
+                  <span>{user.email}</span>
+                  <span className="text-gray-400">pwd: {user.password}</span>
+                </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {roles.find(r => r.value === selectedRole)?.description}
-            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignup && (
-              <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-            )}
-            
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {isSignup && (
-              <div className="flex items-start gap-2">
-                <input type="checkbox" id="terms" required className="mt-1" />
-                <label htmlFor="terms" className="text-sm text-muted-foreground">
-                  I agree to the Terms of Service and Privacy Policy
-                </label>
-              </div>
-            )}
-            
-            <Button type="submit" className="w-full">
-              {isSignup ? "Create Account" : "Sign In"}
-            </Button>
-          </form>
-
-          {!isSignup && (
-            <div className="text-center mt-4">
-              <Button variant="link" className="text-sm">
-                Forgot password?
-              </Button>
-            </div>
-          )}
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 mb-3">New to E-Clinic?</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => onRegister('doctor')}
+                className="w-full py-2 px-4 border border-pink-300 text-pink-600 rounded-lg hover:bg-pink-50 transition-colors text-sm font-medium"
+              >
+                Register as Doctor
+              </button>
+              <button
+                onClick={() => onRegister('clinic')}
+                className="w-full py-2 px-4 border border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
+              >
+                Register Clinic
+              </button>
+              <button
+                onClick={() => onRegister('patient')}
+                className="w-full py-2 px-4 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium"
+              >
+                Register as Patient
+              </button>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" type="button">
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Google
-            </Button>
-            <Button variant="outline" type="button">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-              </svg>
-              GitHub
-            </Button>
-          </div>
-        </Card>
-
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Demo Mode: Use any email to login
-        </p>
+        </div>
       </div>
     </div>
   );

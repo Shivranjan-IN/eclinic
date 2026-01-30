@@ -2,12 +2,12 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useState, useEffect } from "react";
-import { 
-  Activity, 
-  Brain, 
-  Video, 
-  TrendingUp, 
-  Heart, 
+import {
+  Activity,
+  Brain,
+  Video,
+  TrendingUp,
+  Heart,
   Stethoscope,
   Building2,
   Star,
@@ -57,7 +57,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('mousemove', handleMouseMove);
     setIsLoaded(true);
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousemove', handleMouseMove);
@@ -220,9 +220,9 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
         <FloatingElements>
           <div className="absolute inset-0 bg-gradient-to-br from-pink-900/10 via-purple-900/10 to-blue-900/10"></div>
         </FloatingElements>
-        
+
         <ResponsiveContainer>
-          <ResponsiveFlex 
+          <ResponsiveFlex
             direction={{ default: "col", lg: "row" }}
             justify={{ default: "center", lg: "between" }}
             align={{ default: "center", lg: "start" }}
@@ -243,8 +243,8 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
                   </ResponsiveHeading>
                 </TextReveal>
                 <TextReveal delay={600}>
-                  <ResponsiveText 
-                    size={{ default: "base", sm: "lg" }} 
+                  <ResponsiveText
+                    size={{ default: "base", sm: "lg" }}
                     align={{ default: "center", lg: "left" }}
                     className="mb-6 sm:mb-8 font-medium leading-relaxed text-foreground/80"
                   >
@@ -252,8 +252,8 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
                   </ResponsiveText>
                 </TextReveal>
               </div>
-              
-              <ResponsiveFlex 
+
+              <ResponsiveFlex
                 direction={{ default: "col", sm: "row" }}
                 justify={{ default: "center", lg: "start" }}
                 gap="gap-3 sm:gap-4"
@@ -271,7 +271,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
                   Learn More
                 </MagneticButton>
               </ResponsiveFlex>
-              
+
               <GlowingCard className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 mt-6 sm:mt-8 p-4 sm:p-6 bg-card/50 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-border">
                 <div className="text-center sm:text-left">
                   <div className="flex items-center justify-center sm:justify-start gap-1 mb-1">
@@ -295,7 +295,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
             <div className="relative w-full lg:w-auto">
               <ParallaxSection speed={0.3}>
                 <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl">
-                  <ImageWithFallback 
+                  <ImageWithFallback
                     src="https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBwYXRpZW50JTIwY29uc3VsdGF0aW9ufGVufDF8fHx8MTc2MjMxNjYxN3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                     alt="Doctor consultation"
                     className="w-full h-auto max-w-md lg:max-w-full"
@@ -371,7 +371,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
               </div>
             </div>
             <div className="relative">
-              <ImageWithFallback 
+              <ImageWithFallback
                 src="https://images.unsplash.com/photo-1758202292826-c40e172eed1c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpY2FsJTIwdGVjaG5vbG9neSUyMEFJfGVufDF8fHx8MTc2MjQzNjkyOXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="AI Medical Technology"
                 className="rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md lg:max-w-full"
@@ -444,8 +444,8 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
             ))}
           </div>
           <div className="text-center">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               onClick={() => onNavigate("medicine")}
               className="hover:bg-pink-600 hover:text-white transition-all"
@@ -466,8 +466,8 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
                 Book appointments with verified specialists
               </p>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               onClick={() => onNavigate("doctor-consult")}
               className="hover:bg-pink-600 hover:text-white transition-all"
@@ -480,7 +480,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
               <Card key={index} className="p-6 hover:shadow-xl transition-shadow bg-card border-border">
                 <div className="flex flex-col items-center text-center mb-4">
                   <div className="relative mb-4">
-                    <ImageWithFallback 
+                    <ImageWithFallback
                       src={doctor.avatar}
                       alt={doctor.name}
                       className="w-24 h-24 rounded-full"
@@ -538,7 +538,7 @@ export function Home({ onGetStarted, onNavigate }: HomeProps) {
                 </div>
                 <p className="text-foreground/70 mb-6">"{testimonial.content}"</p>
                 <div className="flex items-center gap-3">
-                  <ImageWithFallback 
+                  <ImageWithFallback
                     src={testimonial.avatar}
                     alt={testimonial.name}
                     className="w-12 h-12 rounded-full"

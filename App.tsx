@@ -1,33 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CartProvider } from "./contexts/CartContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Toaster } from "./components/ui/sonner";
+
+// Core Pages
 import { Home } from "./components/Home";
-import { Login } from "./components/Login";
-import { LoginWithOTP } from "./components/LoginWithOTP";
-import { ClinicRegistration } from "./components/ClinicRegistration";
-import { DoctorRegistration } from "./components/DoctorRegistration";
-import { PatientDashboard } from "./components/PatientDashboard";
-import { PatientDashboardNew } from "./components/PatientDashboardNew";
-import { DoctorDashboard } from "./components/DoctorDashboard";
-import { ClinicDashboard } from "./components/ClinicDashboard";
-import ClinicModuleComplete from "./components/ClinicModuleComplete";
+import { LoginPage as Login } from "./components/Login";
 import { Features } from "./components/Features";
 import { HowItWorks } from "./components/HowItWorks";
 import { Pricing } from "./components/Pricing";
 import { AIFeatures } from "./components/AIFeatures";
 import { Healthcare } from "./components/Healthcare";
-import { Medicine } from "./components/Medicine";
-import { CartPage } from "./components/CartPage";
-import { DoctorConsult } from "./components/DoctorConsult";
+import { MedicineEnhanced as Medicine } from "./components/MedicineEnhanced";
+import { TelemedicineConsultationEnhanced as DoctorConsult } from "./components/TelemedicineConsultationEnhanced";
 import { LabTests } from "./components/LabTests";
 import { Plus } from "./components/Plus";
 import { HealthInsights } from "./components/HealthInsights";
 import { Offers } from "./components/Offers";
 import { Contact } from "./components/Contact";
 
-export type UserRole = "patient" | "doctor" | "clinic" | null;
-export type PageView = "home" | "login" | "dashboard" | "features" | "how-it-works" | "pricing" | "ai-features" | "medicine" | "cart" | "healthcare" | "doctor-consult" | "lab-tests" | "plus" | "health-insights" | "offers" | "contact" | "register-clinic" | "register-doctor" | "register-patient" | "clinic-module";
+// Registration Components
+import { ClinicRegistration } from "./components/ClinicRegistration";
+import { DoctorRegistration } from "./components/DoctorRegistration";
+
+// Patient Portal Components
+import { PatientPortal } from "./components/PatientPortal";
+import { DoctorDashboard } from "./components/role-dashboards/DoctorDashboard";
+import { ClinicDashboard } from "./components/role-dashboards/ClinicDashboard";
+import { ReceptionDashboard } from "./components/role-dashboards/ReceptionDashboard";
+import { NurseDashboard } from "./components/role-dashboards/NurseDashboard";
+import { LabDashboard } from "./components/role-dashboards/LabDashboard";
+import { PharmacyDashboard } from "./components/role-dashboards/PharmacyDashboard";
+import { AdminDashboard } from "./components/role-dashboards/AdminDashboard";
+import { getUserWithRole, authService } from "./services/authService";
+import { supabase } from "./lib/supabase";
+import { ClinicProfile } from "./components/ClinicProfile";
+
+export type UserRole = "patient" | "doctor" | "clinic" | "reception" | "nurse" | "lab" | "pharmacy" | "admin" | null;
+
+export type PageView =
+  // Core Pages
+  | "home" | "login" | "dashboard" | "loading"
+  | "features" | "how-it-works" | "pricing" | "ai-features"
+  | "medicine" | "cart" | "healthcare" | "doctor-consult"
+  | "lab-tests" | "plus" | "health-insights" | "offers" | "contact"
+  | "register-clinic" | "register-doctor" | "register-patient"
+  // Patient Portal Views
+  | "patient-book-appointment" | "patient-appointments"
+  | "patient-prescriptions" | "patient-reports" | "patient-billing"
+  | "patient-profile" | "patient-medicine-store" | "patient-video-consult"
+  | "patient-ai-tools"
+  // Clinic Management Views
+  | "clinic-appointments" | "clinic-patients" | "clinic-doctors"
+  | "clinic-staff" | "clinic-billing" | "clinic-pharmacy"
+  | "clinic-lab" | "clinic-prescriptions" | "clinic-queue"
+  | "clinic-reports" | "clinic-iot" | "clinic-ai"
+  | "clinic-security" | "clinic-settings" | "clinic-notifications"
+  | "clinic-profile"
+  // Specific Role Dashboards (if needed separately)
+  | "doctor-dashboard" | "reception-dashboard" | "nurse-dashboard"
+  | "lab-dashboard" | "pharmacy-dashboard";
 
 export interface User {
   id: string;
@@ -41,14 +73,77 @@ export default function App() {
   const [currentView, setCurrentView] = useState<PageView>("home");
   const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const userWithRole = await getUserWithRole();
+        if (userWithRole) {
+          setUser(userWithRole);
+          setCurrentView("dashboard");
+          // Clear callback path if present
+          if (window.location.pathname === "/auth/callback") {
+            window.history.replaceState({}, document.title, "/");
+          }
+        } else {
+          // If we're on the callback path but no user is found after init, 
+          // we might be waiting for the onAuthStateChange event.
+          // However, if we're NOT on callback, go home.
+          if (window.location.pathname !== "/auth/callback") {
+            setCurrentView("home");
+          } else {
+            // On callback but no user yet, show loading
+            setCurrentView("loading");
+            // Set a timeout as a fail-safe to avoid permanent hang
+            setTimeout(() => {
+              if (window.location.pathname === "/auth/callback" && !user) {
+                console.log("Auth callback timeout - redirecting home");
+                setCurrentView("home");
+                window.history.replaceState({}, document.title, "/");
+              }
+            }, 5000);
+          }
+        }
+      } catch (error) {
+        console.error("Initial auth error:", error);
+        setCurrentView("home");
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
+      console.log("Auth event:", event);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        const userWithRole = await getUserWithRole();
+        if (userWithRole) {
+          setUser(userWithRole);
+          setCurrentView("dashboard");
+          if (window.location.pathname === "/auth/callback") {
+            window.history.replaceState({}, document.title, "/");
+          }
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setCurrentView("home");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleLogin = (userData: User) => {
     setUser(userData);
     setCurrentView("dashboard");
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentView("home");
+  const handleLogout = async () => {
+    try {
+      await authService.signOut();
+      setUser(null);
+      setCurrentView("home");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const navigateTo = (view: PageView) => {
@@ -73,7 +168,7 @@ export default function App() {
   };
 
   const handleRegistrationComplete = () => {
-    alert("Registration submitted successfully! You'll receive verification status via email/SMS.");
+    alert("Registration completed successfully!");
     setCurrentView("login");
   };
 
@@ -81,84 +176,216 @@ export default function App() {
     if (currentView === "home") {
       return <Home onGetStarted={() => setCurrentView("login")} onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "login") {
-      return <LoginWithOTP onLogin={handleLogin} onBack={() => setCurrentView("home")} onRegister={handleRegister} />;
+      return <Login onLogin={handleLogin} onBack={() => setCurrentView("home")} onRegister={handleRegister} />;
     }
-    
+
+    // Registration Views
     if (currentView === "register-clinic") {
       return <ClinicRegistration onComplete={handleRegistrationComplete} onBack={() => setCurrentView("login")} />;
     }
-    
+
     if (currentView === "register-doctor") {
       return <DoctorRegistration onComplete={handleRegistrationComplete} onBack={() => setCurrentView("login")} />;
     }
-    
+
+    // Core Service Pages
     if (currentView === "cart") {
-      return <CartPage onNavigate={navigateTo} user={user} onLoginRequired={handleLoginRequired} />;
+      // TODO: Create CartPage component
+      alert("Cart page component needs to be created");
+      return <Home onGetStarted={() => setCurrentView("login")} onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "features") {
       return <Features onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "how-it-works") {
       return <HowItWorks onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "pricing") {
       return <Pricing onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "ai-features") {
       return <AIFeatures onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "medicine") {
       return <Medicine onNavigate={navigateTo} user={user} onLoginRequired={handleLoginRequired} />;
     }
-    
+
     if (currentView === "healthcare") {
       return <Healthcare onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "doctor-consult") {
       return <DoctorConsult onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "lab-tests") {
       return <LabTests onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "plus") {
       return <Plus onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "health-insights") {
       return <HealthInsights onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "offers") {
       return <Offers onNavigate={navigateTo} />;
     }
-    
+
     if (currentView === "contact") {
       return <Contact onNavigate={navigateTo} />;
     }
-    
+
+    // Patient Portal Views
+    if (currentView === "patient-book-appointment") {
+      return <BookAppointment user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-appointments") {
+      return <MyAppointments user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-prescriptions") {
+      return <MyPrescriptions user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-reports") {
+      return <MyReports user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-billing") {
+      return <MyBilling user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-profile") {
+      return <PatientProfile user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-medicine-store") {
+      return <MedicineStore user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-video-consult") {
+      return <VideoConsultation user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "patient-ai-tools") {
+      return <AIHealthTools user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    // Clinic Management Views
+    if (currentView === "clinic-appointments") {
+      return <AppointmentManagement user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-patients") {
+      return <PatientManagement user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-doctors") {
+      return <DoctorManagement user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-staff") {
+      return <StaffManagement user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-billing") {
+      return <BillingPayments user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-pharmacy") {
+      return <PharmacyInventory user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-lab") {
+      return <LabDiagnostics user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-prescriptions") {
+      return <PrescriptionRecords user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-queue") {
+      return <QueueManagement user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-reports") {
+      return <ReportsAnalytics user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-iot") {
+      return <IoTIntegration user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-ai") {
+      return <AIModules user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-security") {
+      return <SecurityCompliance user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-settings") {
+      return <Settings user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-notifications") {
+      return <Notifications user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "clinic-profile") {
+      return <ClinicProfile user={user} onBack={() => setCurrentView("dashboard")} />;
+    }
+
+    if (currentView === "loading") {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="ml-4 text-gray-600">Processing login...</p>
+        </div>
+      );
+    }
+
+    // Dashboard Views (Role-based)
     if (currentView === "dashboard" && user) {
       switch (user.role) {
         case "patient":
-          return <PatientDashboardNew user={user} onLogout={handleLogout} />;
+          return <PatientPortal user={user} onLogout={handleLogout} />;
         case "doctor":
-          return <DoctorDashboard user={user} onLogout={handleLogout} />;
+          return <DoctorDashboard />;
         case "clinic":
-          return <ClinicDashboard user={user} onLogout={handleLogout} />;
+          return <ClinicDashboard />;
+        case "reception":
+          return <ReceptionDashboard />;
+        case "nurse":
+          return <NurseDashboard />;
+        case "lab":
+          return <LabDashboard />;
+        case "pharmacy":
+          return <PharmacyDashboard />;
+        case "admin":
+          return <AdminDashboard />;
         default:
-          return <Home onGetStarted={() => setCurrentView("login")} onNavigate={navigateTo} />;
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+              <h1 className="text-2xl font-bold text-red-600">Unauthorized</h1>
+              <p className="text-gray-600">You do not have permission to access this dashboard.</p>
+              <button onClick={() => setCurrentView("home")} className="mt-4 text-blue-600 hover:underline">Return Home</button>
+            </div>
+          );
       }
     }
-    
+
     return <Home onGetStarted={() => setCurrentView("login")} onNavigate={navigateTo} />;
   };
 
